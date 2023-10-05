@@ -1,0 +1,128 @@
+// Create a custom menu in the Google Sheet
+function onOpen() {
+  var ui = SpreadsheetApp.getUi();
+  ui.createMenu('CSV Importer')
+      .addItem('Import CSV', 'showDialog')
+      .addToUi();
+}
+
+// Show a dialog box for file selection and column selection
+function showDialog() {
+  var html = HtmlService.createHtmlOutputFromFile('Page')
+      .setWidth(400)
+      .setHeight(300);
+  SpreadsheetApp.getUi().showModalDialog(html, 'CSV Importer');
+}
+
+
+// Import CSV data into the Google Sheet
+/*function importCSVData(fileContent, selectedColumns) {
+  var csvData = Utilities.parseCsv(fileContent);
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+
+  // Clear existing data
+  sheet.clear();
+
+  // Filter selected columns
+  var headers = csvData[0];
+  var selectedIndexes = selectedColumns.map(col => headers.indexOf(col));
+
+  // Define batch size
+  var batchSize = 1000;
+  var dataLength = csvData.length;
+
+  for (var i = 0; i < dataLength; i += batchSize) {
+    var endIndex = i + batchSize;
+    if (endIndex > dataLength) {
+      endIndex = dataLength;
+    }
+
+    var batchData = csvData.slice(i, endIndex).map(row => selectedIndexes.map(idx => row[idx]));
+
+    // Write CSV data into the sheet
+    sheet.getRange(i + 1, 1, batchData.length, selectedIndexes.length).setValues(batchData);
+  }
+
+  // Filter selected columns
+  /*if (selectedColumns.length > 0) {
+    var headers = sheet.getRange(1, 1, 1, csvData[0].length).getValues()[0];
+    var selectedIndexes = selectedColumns.map(col => headers.indexOf(col) + 1);
+    sheet.getRange(1, 1, 1, headers.length).activate();
+    sheet.getRange(1, 1, 1, selectedIndexes.length).activate();
+    sheet.getRange(1, selectedIndexes[0]).activate();
+    sheet.getRange(1, selectedIndexes[0], 1, selectedIndexes.length).activate();
+    sheet.getRange(1, selectedIndexes[0], 1, selectedIndexes.length).activate();
+    sheet.getRange(1, selectedIndexes[0], 1, selectedIndexes.length).activate();
+    sheet.getRange(1, selectedIndexes[0], 1, selectedIndexes.length).activate();
+  }
+}*/
+
+function importCSVData(fileContent, selectedColumns) {
+  var csvData = Utilities.parseCsv(fileContent);
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+
+  // Clear existing data
+  sheet.clear();
+
+  // Filter selected columns
+  var headers = csvData[0];
+  var selectedIndexes = selectedColumns.map(col => headers.indexOf(col));
+
+  // Define batch size
+  var batchSize = 1000;
+  var dataLength = csvData.length;
+
+  // Initialize batch variables
+  var batchData = [];
+  var batchStartIndex = 0;
+
+  for (var i = 0; i < dataLength; i++) {
+    var row = csvData[i];
+    var rowData = selectedIndexes.map(idx => row[idx]);
+    batchData.push(rowData);
+
+    if (batchData.length >= batchSize || i === dataLength - 1) {
+      // Write CSV data into the sheet
+      sheet.getRange(batchStartIndex + 1, 1, batchData.length, selectedIndexes.length).setValues(batchData);
+
+      // Reset batch variables
+      batchData = [];
+      batchStartIndex = i + 1;
+    }
+  }
+}
+
+
+// Get the list of columns from the CSV file
+function getCSVColumns(fileContent) {
+  var csvData = Utilities.parseCsv(fileContent);
+  return csvData[0]; // Assuming the first row contains column headers
+}
+
+// Validate selected columns and map them to target sheet
+function validateAndMapColumns(fileContent, selectedColumns, targetSheetName) {
+  var csvData = Utilities.parseCsv(fileContent);
+  var headers = csvData[0];
+  var selectedIndexes = selectedColumns.map(col => headers.indexOf(col));
+  var targetSheet = getOrCreateSheet(targetSheetName);
+
+  if (targetSheet) {
+    var dataToAppend = csvData.map(row => selectedIndexes.map(idx => row[idx]));
+    targetSheet.getRange(targetSheet.getLastRow() + 1, 1, dataToAppend.length, selectedIndexes.length).setValues(dataToAppend);
+    return "Data appended successfully!";
+  } else {
+    return "Error: Could not find or create the target sheet.";
+  }
+}
+
+// Get or create a sheet with a given name
+function getOrCreateSheet(sheetName) {
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = spreadsheet.getSheetByName(sheetName);
+
+  if (sheet) {
+    return sheet;
+  } else {
+    return spreadsheet.insertSheet(sheetName);
+  }
+}

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+  </head>
+  <body>
+    <h1>CSV Importer</h1>
+    <form id="form">
+      <input type="file" id="csvFile" accept=".csv" required><br>
+      <h3>Select Columns:</h3>
+      <div id="columns"></div><br>
+      <label for="targetSheetName">Target Sheet Name:</label>
+      <input type="text" id="targetSheetName" required><br>
+      <input type="submit" value="Import">
+    </form>
+
+    <script>
+      // Function to handle form submission
+      document.getElementById("form").addEventListener("submit", function(event) {
+        event.preventDefault();
+        var file = document.getElementById("csvFile").files[0];
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          var fileContent = e.target.result;
+          var selectedColumns = [];
+          var checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+          checkboxes.forEach(function(checkbox) {
+            selectedColumns.push(checkbox.value);
+          });
+
+          var targetSheetName = document.getElementById("targetSheetName").value;
+
+          if (fileContent && selectedColumns.length > 0 && targetSheetName) {
+            google.script.run.validateAndMapColumns(fileContent, selectedColumns, targetSheetName);
+            google.script.host.close();
+          } else {
+            alert("Please select a CSV file, choose at least one column, and provide a target sheet name.");
+          }
+        }
+        reader.readAsText(file);
+      });
+
+      // Function to add checkboxes for column selection
+      function addCheckboxes(columns) {
+        var container = document.getElementById("columns");
+        for (var i = 0; i < columns.length; i++) {
+          var label = document.createElement("label");
+          label.appendChild(document.createTextNode(columns[i]));
+          var checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.value = columns[i];
+          label.appendChild(checkbox);
+          container.appendChild(label);
+          container.appendChild(document.createElement("br"));
+        }
+      }
+
+      // Fetch available CSV files and add checkboxes for column selection
+      document.getElementById("csvFile").addEventListener("change", function(event) {
+        var file = event.target.files[0];
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          var fileContent = e.target.result;
+          google.script.run.withSuccessHandler(addCheckboxes).getCSVColumns(fileContent);
+        }
+        reader.readAsText(file);
+      });
+    </script>
+  </body>
+</html>
